@@ -35,7 +35,8 @@ unique_genres = sorted(list(set([g for sublist in df['genre'].str.split() for g 
 unique_types = sorted([t.capitalize() for t in df['type'].unique() if isinstance(t, str)])
 
 # 2. Core Recommendation Function
-def get_recommendations(genres, anime_type, weight_genre, weight_type, min_rating, min_members, top_n):
+# Removed weight_genre and weight_type from parameters
+def get_recommendations(genres, anime_type, min_rating, min_members, top_n):
     # Build Query
     genre_query = ' '.join(genres).lower()
     type_query = anime_type.lower().strip()
@@ -48,8 +49,8 @@ def get_recommendations(genres, anime_type, weight_genre, weight_type, min_ratin
     genre_sim = cosine_similarity(user_genre_vec, genre_matrix).flatten()
     type_sim = cosine_similarity(user_type_vec, type_matrix).flatten()
 
-    # Weighted blend (Dynamic based on user input)
-    final_score = (weight_genre * genre_sim) + (weight_type * type_sim)
+    # Weighted blend (Fixed default weights: Genre 0.7, Type 0.3)
+    final_score = (0.7 * genre_sim) + (0.3 * type_sim)
     
     # Copy DataFrame to avoid modifying the original data
     results_df = df.copy()
@@ -66,48 +67,44 @@ def get_recommendations(genres, anime_type, weight_genre, weight_type, min_ratin
 
 # 3. Streamlit User Interface (UI)
 st.title("📺 Anime Recommendation System")
-st.markdown("Temukan anime berdasarkan preferensi genre dan format tayangan Anda menggunakan pendekatan *Content-Based Filtering*.")
+st.markdown("Find Your Anime!")
 
-st.sidebar.header("⚙️ Konfigurasi Rekomendasi")
+st.sidebar.header("⚙️ Recommendation Configuration")
 
 # Sidebar: Basic Filters
-st.sidebar.subheader("Kriteria Dasar")
-selected_genres = st.sidebar.multiselect("Pilih Genre:", unique_genres, default=["romance", "drama"])
-selected_type = st.sidebar.selectbox("Pilih Tipe (Format):", unique_types, index=unique_types.index("Movie") if "Movie" in unique_types else 0)
+st.sidebar.subheader("Basic Criteria")
+selected_genres = st.sidebar.multiselect("Choose Genre:", unique_genres)
+selected_type = st.sidebar.selectbox("Choose Type Anime:", unique_types)
 
 # Sidebar: Advanced Filters (Rating & Members)
-st.sidebar.subheader("Filter Kelayakan")
+st.sidebar.subheader("Filtering")
 min_rating_input = st.sidebar.slider("Minimal Rating", min_value=0.0, max_value=10.0, value=7.5, step=0.1)
 min_members_input = st.sidebar.number_input("Minimal Members", min_value=0, value=5000, step=1000)
 
-# Sidebar: System Weights
-st.sidebar.subheader("Pengaturan Bobot (Advanced)")
-st.sidebar.markdown("Atur seberapa besar pengaruh Genre vs Tipe terhadap hasil akhir.")
-w_genre = st.sidebar.slider("Bobot Genre", 0.0, 1.0, 0.7, 0.1)
-w_type = st.sidebar.slider("Bobot Tipe", 0.0, 1.0, 0.3, 0.1)
-top_n_input = st.sidebar.slider("Jumlah Rekomendasi", 5, 50, 10)
+# Sidebar: Output Settings
+st.sidebar.subheader("Output Settings")
+top_n_input = st.sidebar.slider("Total Recommendation", 5, 50, 10)
 
 # Main Output Area
-if st.sidebar.button("Cari Rekomendasi 🚀", type="primary"):
+if st.sidebar.button("Find Recommendation 🚀", type="primary"):
     if not selected_genres:
-        st.warning("Harap pilih setidaknya satu genre.")
+        st.warning("Please choose at least one Genre.")
     else:
-        st.markdown(f"### Menampilkan Top {top_n_input} Rekomendasi")
-        st.write(f"**Kueri Anda:** Genre `{' | '.join(selected_genres)}`, Tipe `{selected_type}`")
+        st.markdown(f"### Show Top {top_n_input} Recommendations")
+        st.write(f"**Your Query:** Genre `{' | '.join(selected_genres)}`, Type `{selected_type}`")
         
-        with st.spinner('Menghitung tingkat kemiripan...'):
+        with st.spinner('Calculating Similarity...'):
+            # Removed weight arguments from the function call
             recommendations = get_recommendations(
                 genres=selected_genres,
                 anime_type=selected_type,
-                weight_genre=w_genre,
-                weight_type=w_type,
                 min_rating=min_rating_input,
                 min_members=min_members_input,
                 top_n=top_n_input
             )
             
         if recommendations.empty:
-            st.info("Tidak ditemukan anime yang cocok dengan kriteria filter Anda. Coba turunkan Minimal Rating atau Minimal Members.")
+            st.info("No anime were found that match your filter criteria. Try lowering the Minimum Rating or Minimum Members.")
         else:
             # Format the dataframe for better readability
             st.dataframe(

@@ -67,7 +67,7 @@ def get_recommendations(genres, anime_type, min_rating, min_members, top_n):
 
 # 3. Streamlit User Interface (UI)
 st.title("📺 Anime Recommendation System")
-st.markdown("Find Your Anime!")
+# st.markdown("Find Your Anime!")
 
 st.sidebar.header("⚙️ Recommendation Configuration")
 
